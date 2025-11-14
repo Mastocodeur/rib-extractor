@@ -1,5 +1,14 @@
 # 🧾 RIB Extractor
 
+
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![OCR](https://img.shields.io/badge/OCR-Tesseract-blue)](https://github.com/tesseract-ocr/tesseract)
+[![UV Managed](https://img.shields.io/badge/Package_Manager-uv-7F52FF?logo=python&logoColor=white)](https://docs.astral.sh/uv/)
+
+
+
 **RIB Extractor** est un outil Python permettant d’extraire automatiquement les informations bancaires contenues dans des fichiers **RIB au format PDF**, qu’ils soient numériques ou scannés.
 
 Le script utilise la reconnaissance optique de caractères (OCR) pour analyser les documents, détecte les champs bancaires (IBAN, BIC, code banque, titulaire, etc.), puis consigne le tout dans un **fichier CSV propre et structuré**.
@@ -12,10 +21,6 @@ Le script utilise la reconnaissance optique de caractères (OCR) pour analyser l
 - [Aperçu du fonctionnement](#-aperçu-du-fonctionnement)
 - [Installation](#-installation)
 - [Utilisation](#-utilisation)
-- [Structure du projet](#-structure-du-projet)
-- [Dépendances techniques](#-dépendances-techniques)
-- [Compatibilité](#-compatibilité)
-- [Sortie CSV](#-sortie-csv)
 - [Licence](#-licence)
 
 ---
@@ -85,6 +90,20 @@ sudo apt install tesseract-ocr tesseract-ocr-fra poppler-utils
 uv run python rib_extractor.py
 ```
 3. Les résultats sont exportés dans : `rib_infos.csv`
+
+## Structure du projet
+
+```csharp
+rib-extractor/
+│
+├── app.py                   # Interface Streamlit
+├── utils.py                 # Fonctions OCR et parsing RIB
+├── rib_extractor.py         # Version CLI (batch)
+├── pyproject.toml           # Gestion des dépendances via uv
+├── uv.lock                  # Versions figées des libs
+├── README.md                # Documentation du projet
+└── .gitignore               # Fichiers ignorés
+```
 
 
 ## Licence
