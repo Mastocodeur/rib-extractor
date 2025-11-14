@@ -1,4 +1,5 @@
 tesseract-ocr
 tesseract-ocr-fra
 poppler-utils
-pdf2image
+tesseract-ocr-eng
+tesseract-ocr-osd
