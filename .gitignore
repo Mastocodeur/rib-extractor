@@ -2,3 +2,7 @@
 *.csv
 __pycache__/
 .venv/
+.devcontainer/
+.ipynb_checkpoints/
+.vscode/
+.DS_Store
