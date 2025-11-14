@@ -13,6 +13,8 @@
 
 Le script utilise la reconnaissance optique de caractères (OCR) pour analyser les documents, détecte les champs bancaires (IBAN, BIC, code banque, titulaire, etc.), puis consigne le tout dans un **fichier CSV propre et structuré**.
 
+Vous pouvez le visualiser/ l'utiliser ici : https://mastocodeur-rib-extractor-app-su5k18.streamlit.app/
+
 ---
 
 ## 📦 Sommaire
