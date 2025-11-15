@@ -39,26 +39,40 @@ PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
 PAT_BIC = re.compile(
     r"""
     (?i)
-    # ----------- ÉTIQUETTES POSSIBLES -----------
+    # --------------------------------------------------------------------
+    # ÉTIQUETTES BIC / SWIFT avec tolérance OCR
+    # --------------------------------------------------------------------
     (
-        B[\.\s]*I[\.\s]*C                 # BIC, B.I.C, B I C
-        (?:\s*[/:\-\.\s]?\s*SWIFT)?       # + SWIFT, SWIFT après un slash ou rien
+        # BIC, B.I.C, B I C, B  I  C, etc.
+        B[\.\s]*I[\.\s]*C
+
+        # Variantes où SWIFT suit directement ou avec séparateurs
+        (?:[\s\./:-]*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?)?
       |
-        SWIFT(?:\s*CODE)?                 # SWIFT, SWIFT CODE
+        # SWIFT, S.W.I.F.T, SWIFT CODE
+        S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?
       |
-        CODE\s*BIC                        # Code BIC
+        # CODE BIC
+        CODE\s*B[\.\s]*I[\.\s]*C
       |
-        ADRESSE\s*SWIFT                   # Adresse SWIFT
+        # Adresse SWIFT
+        ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T
     )
 
-    # ----------- SÉPARATEUR (souvent :, -, etc.) -----------
-    [^\w\n]{0,10}
+    # --------------------------------------------------------------------
+    # SÉPARATEUR : :, -, ., /, espace, retours OCR… (jusqu'à 40 char max)
+    # --------------------------------------------------------------------
+    [^\w\n]{0,40}
 
-    # ----------- CAPTURE DU CODE BIC -----------
-    ([A-Z0-9]{8}(?:[A-Z0-9]{3})?)         # BIC 8 ou 11 caractères
+    # --------------------------------------------------------------------
+    # CAPTURE DU BIC : tolérant OCR (espaces, points)
+    # On capture large puis on nettoiera dans l'étape suivante
+    # --------------------------------------------------------------------
+    ([A-Z0-9][A-Z0-9\.\s]{5,20})
     """,
     re.VERBOSE
 )
+
 
 
 PAT_TITULAIRE = re.compile(
@@ -178,20 +192,61 @@ PAT_BIC_CODE = re.compile(
     r'\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b'
 )
 
+def nettoyer_bic_ocr(chunk):
+    """
+    Nettoie un BIC sorti de l'OCR :
+    - supprime les espaces
+    - supprime les points
+    - remet en majuscules
+    - limite à 11 caractères max
+    """
+    if not chunk:
+        return ""
+
+    bic = re.sub(r'[^A-Za-z0-9]', '', chunk).upper()
+
+    # Certaines OCR lisent 'BOUS FRPP XXX' → 'BOUSFRPPXXX'
+    # On ne garde que 8 ou 11 chars max.
+    if len(bic) >= 11:
+        bic = bic[:11]
+    elif len(bic) >= 8:
+        bic = bic[:8]
+
+    return bic
+
+
 def extraire_bic_valide(texte):
+    """
+    Extrait un BIC depuis le texte OCR :
+    - Priorité aux labels (BIC, B.I.C, SWIFT, etc.)
+    - Nettoyage OCR intelligent
+    - Fallback sur toute valeur structurée 8 ou 11 chars
+    """
     t = texte.upper()
 
-    # 1. Essai intelligent via labels
+    # 1. Chercher via labels (BIC, SWIFT, Code BIC…)
     m = PAT_BIC.search(t)
     if m:
-        bic = m.group(1)
-        if len(bic) in (8, 11):
+        raw_bic = m.group(2)  # groupe 2 = valeur capturée
+        bic = nettoyer_bic_ocr(raw_bic)
+
+        # Validation
+        if bic_lib:
+            try:
+                if bic_lib.is_valid(bic):
+                    return bic
+            except Exception:
+                pass
+
+        # Vérification structurelle
+        if len(bic) in (8, 11) and bic[:4].isalpha() and bic[4:6].isalpha():
             return bic
 
-    # 2. Fallback brute-force
+    # 2. Fallback brute-force brut (structure BIC 8/11 chars)
     candidats = PAT_BIC_CODE.findall(t)
-    if candidats:
-        return candidats[0]  # généralement le premier est le bon
+    for cand in candidats:
+        if len(cand) in (8, 11) and cand[:4].isalpha() and cand[4:6].isalpha():
+            return cand
 
     return ""
 
