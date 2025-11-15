@@ -37,15 +37,29 @@ PAT_NUM_COMPTE   = re.compile(r'(?i)\b(num(?:[ée]ro)?\s*de\s*compte|n[°\s]*com
 PAT_CLE_RIB      = re.compile(r'(?i)\b(cl[ée]\s*rib|cl[ée])\b\D*([0-9]{2})')
 PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
 PAT_BIC = re.compile(
-    r"""(?i)
+    r"""
+    (?i)
+    # ------------------- LABELS POSSIBLES -------------------
+    (
+        # BIC, B.I.C, B I C, B I C / SWIFT...
         B[\.\s]*I[\.\s]*C
         (?:[\s\./:-]*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?)?
-      | SWIFT(?:\s*CODE)?
-      | CODE\s*B[\.\s]*I[\.\s]*C
-      | ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T
-    """, re.VERBOSE
-)
 
+      | S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?       # SWIFT ou SWIFT CODE
+
+      | CODE\s*B[\.\s]*I[\.\s]*C                            # Code BIC
+
+      | ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T         # Adresse SWIFT
+    )
+
+    # ------------------- SÉPARATEUR FLEXIBLE -------------------
+    [^\w\n]{0,40}            # :, -, ., espace, OCR glitch…
+
+    # ------------------- CAPTURE LARGE DU BIC -------------------
+    ([A-Z0-9][A-Z0-9\.\s]{5,20})   # On nettoie ensuite
+    """,
+    re.VERBOSE
+)
 
 
 
