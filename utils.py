@@ -36,7 +36,21 @@ PAT_CODE_GUICHET = re.compile(r'(?i)\b(code\s*guichet|guichet)\b\D*([0-9]{5})')
 PAT_NUM_COMPTE   = re.compile(r'(?i)\b(num(?:[ée]ro)?\s*de\s*compte|n[°\s]*compte|compte)\b\D*([A-Z0-9]{5,34})')
 PAT_CLE_RIB      = re.compile(r'(?i)\b(cl[ée]\s*rib|cl[ée])\b\D*([0-9]{2})')
 PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
-PAT_BIC = re.compile(r'\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b')
+PAT_BIC = re.compile(
+    r"""
+    (?i)
+    (?:B[\.\s]*I[\.\s]*C        # BIC, B.I.C, B I C
+    |BIC\s*\/\s*SWIFT           # BIC / SWIFT
+    |SWIFT(?:\s*CODE)?          # SWIFT, SWIFT CODE
+    |CODE\s*BIC                 # Code BIC
+    |ADRESSE\s*SWIFT            # Adresse SWIFT
+    )
+    [^\w\n]{0,10}                # :, -, —, espace etc.
+    ([A-Z0-9]{8}(?:[A-Z0-9]{3})?) # vrai code BIC 8 ou 11 chars
+    """,
+    re.VERBOSE
+)
+
 PAT_TITULAIRE = re.compile(
     r'(?i)\b(titulaire(?:\s*du\s*compte)?|nom\s+du\s+titul(?:aire)?|b[ée]n[ée]ficiaire|au\s*nom\s*de)\b\s*[:\-]?\s*([A-ZÉÈÊÀÂÎÏÔÙÜÇa-z0-9\.\'\-\s]+)'
 )
@@ -149,24 +163,28 @@ def construire_iban_fr(cb: str, cg: str, nc: str, cle: str) -> str:
         pass
     return ""
 
-def extraire_bic_valide(t: str) -> str:
-    """Extrait et valide un code BIC/SWIFT."""
-    proches = [
-        m.group(1).upper()
-        for m in re.finditer(r'(?i)(?:BIC|SWIFT)[^\n:]*[:\s-]*([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)', t)
-    ]
-    if not proches:
-        return ""
-    for cand in proches:
-        if bic_lib:
-            try:
-                if bic_lib.is_valid(cand):
-                    return cand
-            except Exception:
-                pass
-        if len(cand) in (8, 11) and cand[:4].isalpha() and cand[4:6].isalpha():
-            return cand
+
+PAT_BIC_CODE = re.compile(
+    r'\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b'
+)
+
+def extraire_bic_valide(texte):
+    t = texte.upper()
+
+    # 1. Essai intelligent via labels
+    m = PAT_BIC.search(t)
+    if m:
+        bic = m.group(1)
+        if len(bic) in (8, 11):
+            return bic
+
+    # 2. Fallback brute-force
+    candidats = PAT_BIC_CODE.findall(t)
+    if candidats:
+        return candidats[0]  # généralement le premier est le bon
+
     return ""
+
 
 def extraire_titulaire(t: str) -> str:
     """Extrait le titulaire du compte depuis le texte OCR."""
