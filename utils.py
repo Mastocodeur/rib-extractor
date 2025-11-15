@@ -36,29 +36,24 @@ PAT_CODE_GUICHET = re.compile(r'(?i)\b(code\s*guichet|guichet)\b\D*([0-9]{5})')
 PAT_NUM_COMPTE   = re.compile(r'(?i)\b(num(?:[ée]ro)?\s*de\s*compte|n[°\s]*compte|compte)\b\D*([A-Z0-9]{5,34})')
 PAT_CLE_RIB      = re.compile(r'(?i)\b(cl[ée]\s*rib|cl[ée])\b\D*([0-9]{2})')
 PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
+# Label BIC / SWIFT tolérant OCR
 PAT_BIC = re.compile(
     r"""
     (?i)
-    # ------------------- LABELS POSSIBLES -------------------
-    (
-        # BIC, B.I.C, B I C, B I C / SWIFT...
-        B[\.\s]*I[\.\s]*C
+    \b(
+        B[\.\s]*I[\.\s]*C              # BIC / B.I.C / B I C
         (?:[\s\./:-]*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?)?
-
-      | S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?       # SWIFT ou SWIFT CODE
-
-      | CODE\s*B[\.\s]*I[\.\s]*C                            # Code BIC
-
-      | ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T         # Adresse SWIFT
-    )
-
-    # ------------------- SÉPARATEUR FLEXIBLE -------------------
-    [^\w\n]{0,40}            # :, -, ., espace, OCR glitch…
-
-    # ------------------- CAPTURE LARGE DU BIC -------------------
-    ([A-Z0-9][A-Z0-9\.\s]{5,20})   # On nettoie ensuite
+      | S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?     # SWIFT / SWIFT CODE
+      | CODE\s*B[\.\s]*I[\.\s]*C                          # CODE BIC
+      | ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T       # ADRESSE SWIFT
+    )\b
     """,
     re.VERBOSE
+)
+
+# Pattern du code BIC lui-même (structure officielle, 8 ou 11 chars)
+PAT_BIC_CODE = re.compile(
+    r'[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?'
 )
 
 
@@ -202,48 +197,83 @@ def nettoyer_bic_ocr(chunk):
 
     return bic
 
-
-def extraire_bic_valide(texte):
+def valider_normaliser_bic(raw: str) -> str:
     """
-    Extrait un BIC de manière robuste en évitant les faux positifs (ex: 'BOULOGNE').
-    Fonctionnement :
-    1) Trouve un LABEL (BIC, SWIFT, B.I.C, Code BIC...)
-    2) Regarde dans les lignes suivantes pour un vrai BIC (8 ou 11 caractères)
-    3) Valide le format strictement
+    Normalise un BIC (supprime le bruit) et le valide.
+
+    Hypothèse volontairement forte :
+    - On travaille sur des RIB français -> le code pays du BIC doit être 'FR'.
+      Si tu veux accepter des banques étrangères, enlève ce test.
     """
+    if not raw:
+        return ""
 
-    lignes = texte.split("\n")
-    total = len(lignes)
+    # Nettoyage brut
+    bic = re.sub(r'[^A-Za-z0-9]', '', raw.upper())
 
-    # 1) Trouver la ligne où apparaît un label BIC / SWIFT
-    for idx, ligne in enumerate(lignes):
+    if len(bic) not in (8, 11):
+        return ""
+
+    # Filtre très fort pour éviter 'BOULOGNE', 'PARIS', etc.
+    # BIC = 4 lettres banque + 2 lettres pays + 2 alnum localisation (+ 3 optionnels)
+    if not (bic[:4].isalpha() and bic[4:6].isalpha()):
+        return ""
+
+    # Pour un RIB FR : pays = FR
+    if bic[4:6] != "FR":
+        return ""
+
+    # Validation via python-stdnum si dispo
+    if bic_lib:
+        try:
+            if not bic_lib.is_valid(bic):
+                return ""
+        except Exception:
+            return ""
+
+    return bic
+
+
+def extraire_bic_valide(texte: str) -> str:
+    """
+    Extraction robuste du BIC :
+
+    1. Trouve une ligne contenant un label BIC / SWIFT / Code BIC / Adresse SWIFT
+    2. Regarde dans les quelques lignes suivantes pour un code BIC au bon format
+    3. Valide et normalise (FR + python-stdnum)
+    4. Fallback global sur tout le texte si aucun label trouvé
+    """
+    lignes = texte.splitlines()
+    n = len(lignes)
+
+    # 1) On cherche d'abord les zones où on parle de BIC / SWIFT
+    for i, ligne in enumerate(lignes):
         if PAT_BIC.search(ligne):
-            # Chercher dans les 5 lignes suivantes un vrai code BIC
-            for j in range(idx, min(idx + 6, total)):
-                candidats = PAT_BIC_CODE.findall(lignes[j].upper())
+            # On prend une fenêtre autour (ligne du label + quelques lignes suivantes)
+            fenetre = "\n".join(lignes[i:i+6]).upper()
 
-                for bic in candidats:
-                    # Validation structurelle stricte
-                    if len(bic) in (8, 11) and bic[:4].isalpha() and bic[4:6].isalpha():
-                        
-                        # Ne garde pas un mot d'adresse (Boulogne, Paris...)
-                        if bic in ["PARIS", "BOULOGNE", "FRANCE"]:
-                            continue
+            # a) Recherche sur la fenêtre compactée (pour gérer 'BOUS FRPP XXX')
+            compact = re.sub(r'[^A-Z0-9]', '', fenetre)
+            candidats = PAT_BIC_CODE.findall(compact)
+            for cand in candidats:
+                bic = valider_normaliser_bic(cand)
+                if bic:
+                    return bic
 
-                        # Vérification via stdnum (si dispo)
-                        if bic_lib:
-                            try:
-                                if bic_lib.is_valid(bic):
-                                    return bic
-                            except:
-                                pass
+            # b) Recherche sur la fenêtre brute (au cas où ce soit déjà bien collé)
+            candidats = PAT_BIC_CODE.findall(fenetre)
+            for cand in candidats:
+                bic = valider_normaliser_bic(cand)
+                if bic:
+                    return bic
 
-                        return bic  # fallback : structure OK
-
-    # 2) Fallback brut si aucun label trouvé
-    candidats = PAT_BIC_CODE.findall(texte.upper())
-    for bic in candidats:
-        if len(bic) in (8, 11):
+    # 2) Si aucun label trouvé ou rien de valide dans la zone → fallback global
+    texte_up = texte.upper()
+    compact_global = re.sub(r'[^A-Z0-9]', '', texte_up)
+    candidats = PAT_BIC_CODE.findall(compact_global)
+    for cand in candidats:
+        bic = valider_normaliser_bic(cand)
+        if bic:
             return bic
 
     return ""
