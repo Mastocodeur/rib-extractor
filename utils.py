@@ -37,41 +37,15 @@ PAT_NUM_COMPTE   = re.compile(r'(?i)\b(num(?:[ée]ro)?\s*de\s*compte|n[°\s]*com
 PAT_CLE_RIB      = re.compile(r'(?i)\b(cl[ée]\s*rib|cl[ée])\b\D*([0-9]{2})')
 PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
 PAT_BIC = re.compile(
-    r"""
-    (?i)
-    # --------------------------------------------------------------------
-    # ÉTIQUETTES BIC / SWIFT avec tolérance OCR
-    # --------------------------------------------------------------------
-    (
-        # BIC, B.I.C, B I C, B  I  C, etc.
+    r"""(?i)
         B[\.\s]*I[\.\s]*C
-
-        # Variantes où SWIFT suit directement ou avec séparateurs
         (?:[\s\./:-]*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?)?
-      |
-        # SWIFT, S.W.I.F.T, SWIFT CODE
-        S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T(?:\s*CODE)?
-      |
-        # CODE BIC
-        CODE\s*B[\.\s]*I[\.\s]*C
-      |
-        # Adresse SWIFT
-        ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T
-    )
-
-    # --------------------------------------------------------------------
-    # SÉPARATEUR : :, -, ., /, espace, retours OCR… (jusqu'à 40 char max)
-    # --------------------------------------------------------------------
-    [^\w\n]{0,40}
-
-    # --------------------------------------------------------------------
-    # CAPTURE DU BIC : tolérant OCR (espaces, points)
-    # On capture large puis on nettoiera dans l'étape suivante
-    # --------------------------------------------------------------------
-    ([A-Z0-9][A-Z0-9\.\s]{5,20})
-    """,
-    re.VERBOSE
+      | SWIFT(?:\s*CODE)?
+      | CODE\s*B[\.\s]*I[\.\s]*C
+      | ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T
+    """, re.VERBOSE
 )
+
 
 
 
@@ -217,38 +191,49 @@ def nettoyer_bic_ocr(chunk):
 
 def extraire_bic_valide(texte):
     """
-    Extrait un BIC depuis le texte OCR :
-    - Priorité aux labels (BIC, B.I.C, SWIFT, etc.)
-    - Nettoyage OCR intelligent
-    - Fallback sur toute valeur structurée 8 ou 11 chars
+    Extrait un BIC de manière robuste en évitant les faux positifs (ex: 'BOULOGNE').
+    Fonctionnement :
+    1) Trouve un LABEL (BIC, SWIFT, B.I.C, Code BIC...)
+    2) Regarde dans les lignes suivantes pour un vrai BIC (8 ou 11 caractères)
+    3) Valide le format strictement
     """
-    t = texte.upper()
 
-    # 1. Chercher via labels (BIC, SWIFT, Code BIC…)
-    m = PAT_BIC.search(t)
-    if m:
-        raw_bic = m.group(2)  # groupe 2 = valeur capturée
-        bic = nettoyer_bic_ocr(raw_bic)
+    lignes = texte.split("\n")
+    total = len(lignes)
 
-        # Validation
-        if bic_lib:
-            try:
-                if bic_lib.is_valid(bic):
-                    return bic
-            except Exception:
-                pass
+    # 1) Trouver la ligne où apparaît un label BIC / SWIFT
+    for idx, ligne in enumerate(lignes):
+        if PAT_BIC.search(ligne):
+            # Chercher dans les 5 lignes suivantes un vrai code BIC
+            for j in range(idx, min(idx + 6, total)):
+                candidats = PAT_BIC_CODE.findall(lignes[j].upper())
 
-        # Vérification structurelle
-        if len(bic) in (8, 11) and bic[:4].isalpha() and bic[4:6].isalpha():
+                for bic in candidats:
+                    # Validation structurelle stricte
+                    if len(bic) in (8, 11) and bic[:4].isalpha() and bic[4:6].isalpha():
+                        
+                        # Ne garde pas un mot d'adresse (Boulogne, Paris...)
+                        if bic in ["PARIS", "BOULOGNE", "FRANCE"]:
+                            continue
+
+                        # Vérification via stdnum (si dispo)
+                        if bic_lib:
+                            try:
+                                if bic_lib.is_valid(bic):
+                                    return bic
+                            except:
+                                pass
+
+                        return bic  # fallback : structure OK
+
+    # 2) Fallback brut si aucun label trouvé
+    candidats = PAT_BIC_CODE.findall(texte.upper())
+    for bic in candidats:
+        if len(bic) in (8, 11):
             return bic
 
-    # 2. Fallback brute-force brut (structure BIC 8/11 chars)
-    candidats = PAT_BIC_CODE.findall(t)
-    for cand in candidats:
-        if len(cand) in (8, 11) and cand[:4].isalpha() and cand[4:6].isalpha():
-            return cand
-
     return ""
+
 
 
 def extraire_titulaire(t: str) -> str:
