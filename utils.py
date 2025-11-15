@@ -39,17 +39,27 @@ PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
 PAT_BIC = re.compile(
     r"""
     (?i)
-    (?:B[\.\s]*I[\.\s]*C        # BIC, B.I.C, B I C
-    |BIC\s*\/\s*SWIFT           # BIC / SWIFT
-    |SWIFT(?:\s*CODE)?          # SWIFT, SWIFT CODE
-    |CODE\s*BIC                 # Code BIC
-    |ADRESSE\s*SWIFT            # Adresse SWIFT
+    # ----------- ÉTIQUETTES POSSIBLES -----------
+    (
+        B[\.\s]*I[\.\s]*C                 # BIC, B.I.C, B I C
+        (?:\s*[/:\-\.\s]?\s*SWIFT)?       # + SWIFT, SWIFT après un slash ou rien
+      |
+        SWIFT(?:\s*CODE)?                 # SWIFT, SWIFT CODE
+      |
+        CODE\s*BIC                        # Code BIC
+      |
+        ADRESSE\s*SWIFT                   # Adresse SWIFT
     )
-    [^\w\n]{0,10}                # :, -, —, espace etc.
-    ([A-Z0-9]{8}(?:[A-Z0-9]{3})?) # vrai code BIC 8 ou 11 chars
+
+    # ----------- SÉPARATEUR (souvent :, -, etc.) -----------
+    [^\w\n]{0,10}
+
+    # ----------- CAPTURE DU CODE BIC -----------
+    ([A-Z0-9]{8}(?:[A-Z0-9]{3})?)         # BIC 8 ou 11 caractères
     """,
     re.VERBOSE
 )
+
 
 PAT_TITULAIRE = re.compile(
     r'(?i)\b(titulaire(?:\s*du\s*compte)?|nom\s+du\s+titul(?:aire)?|b[ée]n[ée]ficiaire|au\s*nom\s*de)\b\s*[:\-]?\s*([A-ZÉÈÊÀÂÎÏÔÙÜÇa-z0-9\.\'\-\s]+)'
