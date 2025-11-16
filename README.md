@@ -5,6 +5,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![OCR](https://img.shields.io/badge/OCR-Tesseract-blue)](https://github.com/tesseract-ocr/tesseract)
+[![Gemini API](https://img.shields.io/badge/Google_AI_Gemini-2.0_Flash-yellow?logo=google&logoColor=white)](https://ai.google.dev)
 [![UV Managed](https://img.shields.io/badge/Package_Manager-uv-7F52FF?logo=python&logoColor=white)](https://docs.astral.sh/uv/)
 
 
