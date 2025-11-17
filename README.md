@@ -52,7 +52,7 @@ Quel que soit le mode choisi (OCR ou VLM), l’outil extrait :
 
 ### 1. Cloner le projet
 ```bash
-git clone https://github.com/ton-utilisateur/rib-extractor.git
+git clone https://github.com/Mastocodeur/rib-extractor.git
 cd rib-extractor
 ```
 
