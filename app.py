@@ -293,6 +293,12 @@ for idx, f in enumerate(uploaded_files):
         continue
 
     # Normalisation
+
+    iban_raw = data.get("iban", "")
+    iban_normal = nettoyer_iban(iban_raw)
+    # Ajout IBAN compact (sans espace) (demande utilisateur)
+    iban_compact = iban_normal.replace(" ", "") if iban_normal else ""
+
     rows.append({
         "Fichier": f.name,
         "Titulaire du compte": data.get("titulaire", ""),
@@ -301,6 +307,7 @@ for idx, f in enumerate(uploaded_files):
         "N° de compte": data.get("numero_compte", ""),
         "Clé RIB": data.get("cle_rib", ""),
         "IBAN": nettoyer_iban(data.get("iban", "")),
+        "IBAN (compact)": iban_compact,
         "BIC / SWIFT": nettoyer_bic(data.get("bic", "")),
         "Domiciliation": nettoyer_domiciliation(data.get("domiciliation", "")),
         "Erreur": "",
@@ -315,10 +322,6 @@ for idx, f in enumerate(uploaded_files):
 
 df = pd.DataFrame(rows)
 
-
-# Ajout IBAN compact (sans espace) (demande utilisateur)
-df["IBAN (compact)"] = df["IBAN"].str.replace(" ", "", regex=False)
-
 st.success("✅ Extraction terminée")
 st.dataframe(df, width="stretch")
 
@@ -331,20 +334,24 @@ st.download_button(
     mime="text/csv",
 )
 
-# --------- EXPORT EXCEL ---------
-excel = df.to_excel(index=False, engine="xlsxwriter")
+import io
+# ==================== EXPORT EXCEL ====================
+excel_buffer = io.BytesIO()
+with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+    df.to_excel(writer, index=False)
 st.download_button(
     "📎 Télécharger en Excel (.xlsx)",
-    data=df.to_excel(index=False, engine='xlsxwriter'),
+    data=excel_buffer.getvalue(),
     file_name="rib_extraction.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
 
-# --------- EXPORT PARQUET ---------
-parquet = df.to_parquet(index=False)
+# ==================== EXPORT PARQUET ====================
+parquet_buffer = io.BytesIO()
+df.to_parquet(parquet_buffer, index=False)
 st.download_button(
     "🗂️ Télécharger en Parquet (.parquet)",
-    data=df.to_parquet(index=False),
+    data=parquet_buffer.getvalue(),
     file_name="rib_extraction.parquet",
     mime="application/octet-stream",
 )
