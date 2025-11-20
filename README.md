@@ -34,7 +34,9 @@ Quel que soit le mode choisi (OCR ou VLM), l’outil extrait :
 * IBAN (format propre et espacés 4/4)
 * BIC / SWIFT (normalisation automatique)
 * Domiciliation multi-lignes
-* Export CSV utilisable dans Excel (zéros conservés)
+* Export `.csv` utilisable dans Excel (zéros conservés)
+* Export `.xlsx`
+* Export `.parquet`
 
 ---
 

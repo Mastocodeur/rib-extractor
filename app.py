@@ -314,13 +314,37 @@ for idx, f in enumerate(uploaded_files):
 # =====================================================================
 
 df = pd.DataFrame(rows)
+
+
+# Ajout IBAN compact (sans espace) (demande utilisateur)
+df["IBAN (compact)"] = df["IBAN"].str.replace(" ", "", regex=False)
+
 st.success("✅ Extraction terminée")
 st.dataframe(df, width="stretch")
 
+# --------- EXPORT CSV ---------
 csv = df.to_csv(index=False).encode("utf-8")
 st.download_button(
     "⬇️ Télécharger le CSV",
     data=csv,
     file_name="rib_extraction.csv",
     mime="text/csv",
+)
+
+# --------- EXPORT EXCEL ---------
+excel = df.to_excel(index=False, engine="xlsxwriter")
+st.download_button(
+    "📎 Télécharger en Excel (.xlsx)",
+    data=df.to_excel(index=False, engine='xlsxwriter'),
+    file_name="rib_extraction.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+)
+
+# --------- EXPORT PARQUET ---------
+parquet = df.to_parquet(index=False)
+st.download_button(
+    "🗂️ Télécharger en Parquet (.parquet)",
+    data=df.to_parquet(index=False),
+    file_name="rib_extraction.parquet",
+    mime="application/octet-stream",
 )
