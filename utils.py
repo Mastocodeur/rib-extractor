@@ -203,7 +203,7 @@ def valider_normaliser_bic(raw: str) -> str:
 
     Hypothèse volontairement forte :
     - On travaille sur des RIB français -> le code pays du BIC doit être 'FR'.
-      Si tu veux accepter des banques étrangères, enlève ce test.
+      Si on veut accepter des banques étrangères, il faudra enlever ce test.
     """
     if not raw:
         return ""

@@ -61,7 +61,7 @@ SORTIE_CSV = "rib_infos.csv"        # Nom du fichier CSV de sortie
 
 
 # ---------------------------------------------------------------------------
-# Expressions régulières pour l’extraction des champs RIB
+# Expressions régulières pour l'extraction des champs RIB
 # ---------------------------------------------------------------------------
 
 PAT_CODE_BANQUE  = re.compile(r'(?i)\b(code\s*banque|banque|code\s*bq)\b\D*([0-9]{5})')
@@ -97,7 +97,7 @@ PAT_DOMICILIATION = re.compile(r'(?i)\b(domiciliation|agence|adresse)\b\s*[:\-]?
 def extraire_texte_ocr(path: str) -> str:
     """
     Exécute une reconnaissance optique de caractères (OCR) sur un fichier PDF.
-    Chaque page est convertie en image avant d’être analysée par Tesseract.
+    Chaque page est convertie en image avant d'être analysée par Tesseract.
 
     Args:
         path (str): Chemin vers le fichier PDF.
@@ -211,7 +211,7 @@ def construire_iban_fr(cb: str, cg: str, nc: str, cle: str) -> str:
 
 #region BIC
 # ---------------------------------------------------------------------------
-# Fonctions d’extraction du BIC, Titulaire et Domiciliation
+# Fonctions d'extraction du BIC, Titulaire et Domiciliation
 # ---------------------------------------------------------------------------
 PAT_BIC_CODE = re.compile(
     r'\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b'
@@ -242,7 +242,7 @@ def valider_normaliser_bic(raw: str) -> str:
 
     Hypothèse volontairement forte :
     - On travaille sur des RIB français -> le code pays du BIC doit être 'FR'.
-      Si tu veux accepter des banques étrangères, enlève ce test.
+      Si on veut accepter des banques étrangères, il faudra enlever ce test.
     """
     if not raw:
         return ""
@@ -332,8 +332,8 @@ def extraire_titulaire(t: str) -> str:
 
 def extraire_domiciliation(t: str) -> str:
     """
-    Extrait la domiciliation sur plusieurs lignes, jusqu’à la prochaine rubrique identifiable.
-    Combine toutes les lignes de l’agence ou de l’adresse.
+    Extrait la domiciliation sur plusieurs lignes, jusqu'à la prochaine rubrique identifiable.
+    Combine toutes les lignes de l'agence ou de l'adresse.
     """
     lignes = [l.strip() for l in t.split('\n') if l.strip()]
 
@@ -368,11 +368,11 @@ def extraire_domiciliation(t: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Extraction complète d’un texte OCR
+# Extraction complète d'un texte OCR
 # ---------------------------------------------------------------------------
 
 def extraire_par_libelles(t: str):
-    """Extrait tous les champs d’un texte OCR via recherche de labels."""
+    """Extrait tous les champs d'un texte OCR via recherche de labels."""
     cb = cg = nc = cle = tit = dom = ""
     m = PAT_CODE_BANQUE.search(t);  cb = m.group(2) if m else ""
     m = PAT_CODE_GUICHET.search(t); cg = m.group(2) if m else ""
@@ -385,7 +385,7 @@ def extraire_par_libelles(t: str):
 
 
 # ---------------------------------------------------------------------------
-# Boucle principale d’analyse de tous les fichiers PDF
+# Boucle principale d'analyse de tous les fichiers PDF
 # ---------------------------------------------------------------------------
 
 rows = []
@@ -402,7 +402,7 @@ for fichier in os.listdir(DOSSIER_PDF):
     iban = extraire_iban_valide(tclean)
     cb = cg = nc = cle = tit = dom = ""
 
-    # Décomposition éventuelle de l’IBAN
+    # Décomposition éventuelle de l'IBAN
     if iban:
         cb, cg, nc, cle = decomposer_iban_fr(iban)
 

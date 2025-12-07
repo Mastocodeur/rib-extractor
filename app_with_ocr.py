@@ -21,13 +21,13 @@ st.set_page_config(page_title="RIB Extractor", page_icon="💳", layout="centere
 st.title("💳 RIB Extractor - OCR et Analyse Automatique")
 
 st.markdown("""
-Cet outil extrait automatiquement les informations d’un **RIB PDF** grâce à l’OCR :
+Cet outil extrait automatiquement les informations d'un **RIB PDF** grâce à l'OCR :
 - Titulaire du compte  
 - Code banque, guichet, compte et clé RIB  
 - IBAN et BIC / SWIFT  
 - Domiciliation complète (multi-lignes)
 
-Téléversez un ou plusieurs fichiers PDF ci-dessous pour démarrer l’analyse.
+Téléversez un ou plusieurs fichiers PDF ci-dessous pour démarrer l'analyse.
 """)
 
 # --- Zone d'upload ---
