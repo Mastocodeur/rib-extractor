@@ -45,8 +45,8 @@ if not API_KEY:
 
 # Endpoint officiel REST Gemini 2.0 Flash
 API_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent?key=" + API_KEY
+    "https://generativelanguage.googleapis.com/v1/models/"
+    "gemini-2.5-flash:generateContent?key=" + API_KEY
 )
 
 #region prompt
