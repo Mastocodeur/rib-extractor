@@ -3,7 +3,7 @@ import pandas as pd
 import tempfile
 import os
 import traceback
-from utils import (
+from app.utils import (
     extraire_texte_ocr,
     nettoyer,
     extraire_par_libelles,
