@@ -45,9 +45,14 @@ logging.getLogger("pdfminer").setLevel(logging.ERROR)
 # puis on cherche 5 chiffres après n’importe quel séparateur non numérique
 PAT_CODE_BANQUE  = re.compile(r'(?i)\b(code\s*banque|banque|code\s*bq)\b\D*([0-9]{5})')
 
-
+# Recherche du label 'guichet' et autorisation de toutes ses variations d'espacement, 
+# puis on prend le premier groupe de 5 chiffres après n’importe quel séparateur non numérique.
 PAT_CODE_GUICHET = re.compile(r'(?i)\b(code\s*guichet|guichet)\b\D*([0-9]{5})')
+# Recherche du label 'numéro de compte' et ses variantes, 
+# puis on prend le groupe de 5 à 34 caractères alphanumériques après n’importe quel séparateur non numérique.
 PAT_NUM_COMPTE   = re.compile(r'(?i)\b(num(?:[ée]ro)?\s*de\s*compte|n[°\s]*compte|compte)\b\D*([A-Z0-9]{5,34})')
+# Recherche du label 'clé RIB' ou 'clé' et ses variantes, 
+# puis on prend le groupe de 2 chiffres après n’importe quel séparateur non numérique.
 PAT_CLE_RIB      = re.compile(r'(?i)\b(cl[ée]\s*rib|cl[ée])\b\D*([0-9]{2})')
 
 # Structure obligatoire d’un IBAN français : FR + 2 chiffres de clé + 23 caractères alphanumériques
