@@ -25,9 +25,12 @@ https://mastocodeur-rib-extractor-app-su5k18.streamlit.app/
 
 ---
 
-## 🚀 Présentation et Fonctionnalités
+
 
 ![Slide de présentation](assets/slide_presentation.png)
+
+
+## 🚀 Fonctionnalités
 
 Quel que soit le mode choisi (OCR ou VLM), l’outil extrait :
 
