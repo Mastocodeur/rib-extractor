@@ -40,12 +40,22 @@ logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
 #region REGEX
 # --- Expressions régulières de détection des champs ---
+
+# On reconnaît le texte 'code banque', 'banque' ou 'code bq', 
+# puis on cherche 5 chiffres après n’importe quel séparateur non numérique
 PAT_CODE_BANQUE  = re.compile(r'(?i)\b(code\s*banque|banque|code\s*bq)\b\D*([0-9]{5})')
+
+
 PAT_CODE_GUICHET = re.compile(r'(?i)\b(code\s*guichet|guichet)\b\D*([0-9]{5})')
 PAT_NUM_COMPTE   = re.compile(r'(?i)\b(num(?:[ée]ro)?\s*de\s*compte|n[°\s]*compte|compte)\b\D*([A-Z0-9]{5,34})')
 PAT_CLE_RIB      = re.compile(r'(?i)\b(cl[ée]\s*rib|cl[ée])\b\D*([0-9]{2})')
+
+# Structure obligatoire d’un IBAN français : FR + 2 chiffres de clé + 23 caractères alphanumériques
 PAT_IBAN_FR_COMPACT = re.compile(r'FR\d{2}[A-Z0-9]{23}')
+
 # Label BIC / SWIFT tolérant OCR
+# Recherche les mots-clés BIC / SWIFT dans toutes les formes possibles, 
+# y compris avec des erreurs OCR, grâce à un pattern très tolérant.
 PAT_BIC = re.compile(
     r"""
     (?i)
@@ -61,12 +71,14 @@ PAT_BIC = re.compile(
 )
 
 # Pattern du code BIC lui-même (structure officielle, 8 ou 11 chars)
+# 4 lettres (banque), 2 lettres (pays), 2 alphanumériques (localisation), 3 optionnels (agence).
 PAT_BIC_CODE = re.compile(
     r'[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?'
 )
 
 
-
+# On couvre différents libellés possibles pour capter le titulaire, 
+# car la structure des RIB varie selon les banques.
 PAT_TITULAIRE = re.compile(
     r'(?i)\b(titulaire(?:\s*du\s*compte)?|nom\s+du\s+titul(?:aire)?|b[ée]n[ée]ficiaire|au\s*nom\s*de)\b\s*[:\-]?\s*([A-ZÉÈÊÀÂÎÏÔÙÜÇa-z0-9\.\'\-\s]+)'
 )
