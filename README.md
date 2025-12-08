@@ -70,9 +70,17 @@ sudo apt install tesseract-ocr tesseract-ocr-fra poppler-utils
 ```
 
 
+# Version OCR locale
+
+1. Le script lit chaque fichier PDF présent dans le dossier `rib/`.
+2. Chaque page est convertie en image haute résolution (300 dpi).
+3. L’image est analysée par **Tesseract OCR** pour produire un texte brut.
+4. Des expressions régulières et heuristiques détectent les champs bancaires.
+5. Les résultats sont formatés, validés et exportés dans `rib_infos.csv`.
+
 ## Utilisation
 
-1. Dépose tous tes fichiers PDF de RIB dans le dossier `rib/`.
+1. Dépose tous tes fichiers PDF de RIB dans le dossier `rib/` si utilisation de `rib_extractor.py`.
 2. Exécute le script principal :
 ```bash
 uv run python rib_extractor.py
@@ -81,17 +89,9 @@ ou
 
 uv run streamlit run app_with_ocr.py
 ```
-3. Les résultats sont exportés dans : `rib_infos.csv`
+3. Les résultats sont exportés dans : `rib_infos.csv` pour `rib_extractor.py` ou téléchargeable avec `app_with_ocr.py`.
 
 **On notera que cette version fait des erreurs**.
-
-# Version OCR locale : `rib_extractor.py`
-
-1. Le script lit chaque fichier PDF présent dans le dossier `rib/`.
-2. Chaque page est convertie en image haute résolution (300 dpi).
-3. L’image est analysée par **Tesseract OCR** pour produire un texte brut.
-4. Des expressions régulières et heuristiques détectent les champs bancaires.
-5. Les résultats sont formatés, validés et exportés dans `rib_infos.csv`.
 
 
 # Version IA Vision Gemini : `app.py`
