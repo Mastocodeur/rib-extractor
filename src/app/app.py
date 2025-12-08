@@ -171,19 +171,23 @@ def analyser_rib(file) -> str:
     ------
     str : texte renvoyé par le modèle, ou message d'erreur formaté.
     """
-
+    # Conversion du fichier en base64
     raw_bytes = file.read()
+    # Encodage du fichier en Base64 pour l'envoi via l'API REST
     b64_data = base64.b64encode(raw_bytes).decode("utf-8")
 
+    # Construction du payload REST pour Gemini :
+    # - une partie texte (PROMPT)
+    # - une partie image inline (document binaire encodé en base64)
     payload = {
         "contents": [
             {
                 "parts": [
-                    {"text": PROMPT},
+                    {"text": PROMPT}, # Prompt strict demandant un JSON propre
                     {
                         "inline_data": {
-                            "mime_type": file.type,
-                            "data": b64_data
+                            "mime_type": file.type, # type du fichier (pdf/png/jpeg)
+                            "data": b64_data # encodage base64 du document
                         }
                     }
                 ]
@@ -192,21 +196,27 @@ def analyser_rib(file) -> str:
     }
 
     try:
+        # Envoi de la requête POST à l'API REST Gemini
         response = requests.post(API_URL, json=payload)
         res_json = response.json()
 
         # Cas : erreur API
+        # Si Google renvoie un bloc "error", on le retourne proprement
         if "error" in res_json:
             return "__ERROR_API__ " + json.dumps(res_json["error"], ensure_ascii=False, indent=2)
-
+        
+        # Extraction du texte renvoyé par le modèle
         candidates = res_json.get("candidates", [])
         if not candidates:
             return "__ERROR_NO_CANDIDATE__ " + json.dumps(res_json, ensure_ascii=False, indent=2)
 
+        # Extraction du texte complet depuis les parties
         parts = candidates[0].get("content", {}).get("parts", [])
+        # Reconstruction du texte complet
         return "".join(p.get("text", "") for p in parts)
 
     except Exception as e:
+        # En cas d'erreur technique, on renvoie un message formaté
         return f"__ERROR_EXCEPTION__ {e}"
 
 
