@@ -67,7 +67,7 @@ PAT_BIC = re.compile(
       | ADRESSE\s*S[\.\s]*W[\.\s]*I[\.\s]*F[\.\s]*T       # ADRESSE SWIFT
     )\b
     """,
-    re.VERBOSE
+    re.VERBOSE # Permet d’ajouter des commentaires et des sauts de lignes dans le pattern
 )
 
 # Pattern du code BIC lui-même (structure officielle, 8 ou 11 chars)
