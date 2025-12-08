@@ -20,12 +20,14 @@ L’application est disponible en ligne :
 https://mastocodeur-rib-extractor-app-su5k18.streamlit.app/
 
 
-![Demo de l'application](video/demo.gif)
+![Demo de l'application](assets/demo.gif)
 
 
 ---
 
-## 🚀 Fonctionnalités
+## 🚀 Présentation et Fonctionnalités
+
+![Slide de présentation](assets/slide_presentation.png)
 
 Quel que soit le mode choisi (OCR ou VLM), l’outil extrait :
 
