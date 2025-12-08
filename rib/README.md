@@ -1,1 +1,0 @@
-C'est dans ce fichier que vous placez vos RIB au format pdf.
