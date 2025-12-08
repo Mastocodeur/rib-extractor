@@ -12,13 +12,16 @@
 
 RIB Extractor est un outil complet permettant d’extraire automatiquement les informations d’un RIB français, que ce soit via :
 
-  * 🟦 OCR Tesseract (version autonome, locale, sans API)
+  * 🟦 OCR Tesseract 
 
-  * 🟨 IA Vision (VLM) Gemini 2.0 Flash (lecture visuelle solide directement sur PDF/images)
+  * 🟨 IA Vision (VLM) Gemini 2.5 Flash 
 
 L’application est disponible en ligne :
 👉 https://mastocodeur-rib-extractor-app-su5k18.streamlit.app/
 
+
+<video src="video/demo.mp4" width="600" controls>
+</video>
 
 ---
 
@@ -40,43 +43,32 @@ Quel que soit le mode choisi (OCR ou VLM), l’outil extrait :
 
 ---
 
-# Version OCR locale : `app_with_ocr.py`
+# ⚙️ Installation
 
-1. Le script lit chaque fichier PDF présent dans le dossier `rib/`.
-2. Chaque page est convertie en image haute résolution (300 dpi).
-3. L’image est analysée par **Tesseract OCR** pour produire un texte brut.
-4. Des expressions régulières et heuristiques détectent les champs bancaires.
-5. Les résultats sont formatés, validés et exportés dans `rib_infos.csv`.
-
-
-
-## ⚙️ Installation
-
-### 1. Cloner le projet
+## 1. Cloner le projet
 ```bash
 git clone https://github.com/Mastocodeur/rib-extractor.git
 cd rib-extractor
 ```
 
-### 2. Créer un environnement virtuel (via uv ou venv)
+## 2. Créer un environnement virtuel (via uv ou venv)
 ```bash
 uv venv
 source .venv/bin/activate
 ```
 
-### 3. Installer les dépendances (depuis pyproject.toml)
+## 3. Installer les dépendances (depuis pyproject.toml)
 
 ```bash
 uv pip install -e .
 ```
 
-### 4. Installer Tesseract OCR et Poppler
+## 4. Installer Tesseract OCR et Poppler
 
 ```bash
 sudo apt install tesseract-ocr tesseract-ocr-fra poppler-utils
 ```
 
----
 
 ## Utilisation
 
@@ -93,11 +85,18 @@ uv run streamlit run app_with_ocr.py
 
 **On notera que cette version fait des erreurs**.
 
+# Version OCR locale : `rib_extractor.py`
+
+1. Le script lit chaque fichier PDF présent dans le dossier `rib/`.
+2. Chaque page est convertie en image haute résolution (300 dpi).
+3. L’image est analysée par **Tesseract OCR** pour produire un texte brut.
+4. Des expressions régulières et heuristiques détectent les champs bancaires.
+5. Les résultats sont formatés, validés et exportés dans `rib_infos.csv`.
 
 
 # Version IA Vision Gemini : `app.py`
 
-Cette version utilise le modèle Gemini 2.0 Flash Vision via l’API REST Google.
+Cette version utilise le modèle Gemini 2.5 Flash Vision via l’API REST Google.
 
 Elle lit :
 
