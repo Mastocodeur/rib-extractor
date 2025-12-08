@@ -17,11 +17,11 @@ RIB Extractor est un outil complet permettant d’extraire automatiquement les i
   * 🟨 IA Vision (VLM) Gemini 2.5 Flash 
 
 L’application est disponible en ligne :
-👉 https://mastocodeur-rib-extractor-app-su5k18.streamlit.app/
+https://mastocodeur-rib-extractor-app-su5k18.streamlit.app/
 
 
-<video src="video/demo.mp4" width="600" controls>
-</video>
+![Demo de l'application](video/demo.gif)
+
 
 ---
 

@@ -8,5 +8,7 @@ __pycache__/
 .DS_Store
 .env
 .env.local
+*.Zone.Identifier
 .Zone.Identifier
 .devcontainer
+*.mp4
