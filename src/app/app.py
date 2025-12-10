@@ -43,7 +43,7 @@ if not API_KEY:
     st.error("❌ Clé GEMINI_API_KEY manquante dans .env ou .streamlit/secrets.toml")
     st.stop()
 
-# Endpoint officiel REST Gemini 2.0 Flash
+# Endpoint officiel REST Gemini 2.5 Flash
 API_URL = (
     "https://generativelanguage.googleapis.com/v1/models/"
     "gemini-2.5-flash:generateContent?key=" + API_KEY
