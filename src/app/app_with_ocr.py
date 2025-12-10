@@ -3,7 +3,7 @@ import pandas as pd
 import tempfile
 import os
 import traceback
-from app.utils import (
+from utils import (
     extraire_texte_ocr,
     nettoyer,
     extraire_par_libelles,
@@ -13,6 +13,9 @@ from app.utils import (
     calculer_cle_rib,
     construire_iban_fr,
 )
+
+# streamlit run app_with_ocr.py --server.port 8502
+
 
 # Configuration de la page Streamlit
 st.set_page_config(page_title="RIB Extractor", page_icon="💳", layout="centered")
@@ -43,25 +46,29 @@ if not uploaded_files:
     st.stop()
 
 # --- Traitement des fichiers uploadés ---
-data = []
-progress = st.progress(0)
-total = len(uploaded_files)
+data = [] # Contiendra les résultats finaux
+progress = st.progress(0) # Barre de progression Streamlit
+total = len(uploaded_files) # Nombre total de fichiers
 
-def nz(v):  # utilitaire: valeur non vide ou "MANQUANT"
+
+
+# Petite fonction utilitaire : remplace "" par "MANQUANT"
+def nz(v):  
     return v if (v is not None and str(v).strip() != "") else "MANQUANT"
 
+# Boucle principale : traitement de chaque fichier PDF uploadé
 for idx, file in enumerate(uploaded_files):
     tmp_path = None
     try:
         # 1) Sauvegarde temporaire du PDF
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            tmp.write(file.read())
-            tmp_path = tmp.name
+            tmp.write(file.read()) # Écriture du contenu dans un fichier local
+            tmp_path = tmp.name # Stockage du chemin vers le fichier temp
 
         # 2) OCR
         st.write(f"🔍 Lecture et OCR sur **{file.name}** ...")
-        texte = extraire_texte_ocr(tmp_path)
-        tclean = nettoyer(texte)
+        texte = extraire_texte_ocr(tmp_path) # OCR brut
+        tclean = nettoyer(texte) # Nettoyage du texte OCR
 
         # Si rien n'est lu par l'OCR, on considère que c'est une erreur "douce"
         if not tclean.strip():
@@ -74,6 +81,7 @@ for idx, file in enumerate(uploaded_files):
         if iban:
             cb, cg, nc, cle = decomposer_iban_fr(iban)
 
+        # Valeurs trouvées via libellés si IBAN incomplet
         lb_cb, lb_cg, lb_nc, lb_cle, lb_tit, lb_dom = extraire_par_libelles(tclean)
         cb = cb or lb_cb
         cg = cg or lb_cg
@@ -88,6 +96,7 @@ for idx, file in enumerate(uploaded_files):
         if not iban and all([cb, cg, nc, cle]):
             iban = construire_iban_fr(cb, cg, nc, cle)
 
+        # Extraction du bic
         bic = extraire_bic_valide(tclean)
 
         # 5) Ajout des résultats OK
@@ -132,7 +141,7 @@ for idx, file in enumerate(uploaded_files):
 # --- Affichage des résultats ---
 df = pd.DataFrame(data)
 
-# Astuce : on met la colonne Statut devant pour la visibilité
+# On met la colonne Statut devant pour la visibilité
 cols = ["Fichier", "Statut", "Titulaire du compte", "Code Banque", "Code Guichet",
         "N° de compte", "Clé RIB", "BIC / SWIFT", "IBAN", "Domiciliation"]
 df = df.reindex(columns=cols)
