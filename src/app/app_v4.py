@@ -11,6 +11,7 @@ import json
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pdfplumber
 import streamlit as st
@@ -124,7 +125,7 @@ def _nettoyer_json(texte: str) -> str:
     return texte
 
 
-_FALLBACK_MODELS: list[str] = ["gemini-2.5-flash", "gemini-3.5-flash"]
+_FALLBACK_MODELS: list[str] = ["gemini-3.6-flash", "gemini-3.5-flash"]
 _MAX_RETRIES = 3
 
 
@@ -132,6 +133,12 @@ def _is_503(exc: Exception) -> bool:
     """Détecte une erreur 503 / UNAVAILABLE de l'API Gemini."""
     msg = str(exc)
     return "503" in msg or "UNAVAILABLE" in msg
+
+
+def _is_404(exc: Exception) -> bool:
+    """Détecte un modèle indisponible (retiré ou inaccessible)."""
+    msg = str(exc)
+    return "404" in msg or "NOT_FOUND" in msg
 
 
 def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
@@ -165,6 +172,8 @@ def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
                 raw = getattr(response, "text", "")
                 return f"__ERROR__ Réponse non-JSON : {raw[:200]}"
             except Exception as e:
+                if _is_404(e):
+                    break  # modèle retiré → passe au suivant sans retry
                 if _is_503(e):
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(2 ** attempt)  # 1s, 2s, 4s
@@ -246,23 +255,35 @@ rows: list[dict] = []
 progress = st.progress(0)
 total = len(uploaded_files)
 
-for idx, f in enumerate(uploaded_files):
-    st.write(f"🔍 Analyse de **{f.name}**…")
-    raw_bytes = f.read()
+# Lecture séquentielle (objets Streamlit non thread-safe)
+file_data = [(f.name, f.type, f.read()) for f in uploaded_files]
+
+
+def _traiter_fichier(name: str, mime_type: str, raw_bytes: bytes) -> dict:
+    """Traite un fichier : extraction Gemini + vérification pdfplumber."""
     erreur = ""
     verification = ""
     rib_data = RibData()
-
-    result = extraire_via_gemini(raw_bytes, f.type)
+    result = extraire_via_gemini(raw_bytes, mime_type)
     if isinstance(result, str):
         erreur = result
     else:
         rib_data = result
-        if f.type == "application/pdf":
+        if mime_type == "application/pdf":
             verification = verifier_iban(rib_data.iban, raw_bytes)
+    return rib_data.to_export_row(name, "Gemini Vision", erreur, verification)
 
-    rows.append(rib_data.to_export_row(f.name, "Gemini Vision", erreur, verification))
-    progress.progress((idx + 1) / total)
+
+with ThreadPoolExecutor(max_workers=min(total, 5)) as executor:
+    futures = {
+        executor.submit(_traiter_fichier, name, mime_type, raw_bytes): name
+        for name, mime_type, raw_bytes in file_data
+    }
+    done = 0
+    for future in as_completed(futures):
+        rows.append(future.result())
+        done += 1
+        progress.progress(done / total)
 
 df = pd.DataFrame(rows)
 
