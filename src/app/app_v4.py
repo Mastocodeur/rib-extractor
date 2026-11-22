@@ -10,6 +10,7 @@ import io
 import json
 import os
 import re
+import time
 
 import pdfplumber
 import streamlit as st
@@ -44,7 +45,7 @@ class Settings(BaseModel):
         description="Clé API Google Gemini (jamais loggée).",
     )
     gemini_model: str = Field(
-        default="gemini-3.8-flash",
+        default="gemini-flash-latest",
         description="Identifiant du modèle Gemini.",
     )
     texte_min_chars: int = Field(
@@ -59,7 +60,7 @@ class Settings(BaseModel):
         load_dotenv()
         return cls(
             gemini_api_key=SecretStr(os.getenv("GEMINI_API_KEY", "")),
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-flash-latest"),
             texte_min_chars=int(os.getenv("TEXTE_MIN_CHARS", "80")),
         )
 
@@ -123,27 +124,55 @@ def _nettoyer_json(texte: str) -> str:
     return texte
 
 
+_FALLBACK_MODELS: list[str] = ["gemini-2.5-flash", "gemini-3.5-flash"]
+_MAX_RETRIES = 3
+
+
+def _is_503(exc: Exception) -> bool:
+    """Détecte une erreur 503 / UNAVAILABLE de l'API Gemini."""
+    msg = str(exc)
+    return "503" in msg or "UNAVAILABLE" in msg
+
+
 def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
-    """Envoie le document à Gemini et parse la réponse dans RibData."""
+    """Envoie le document à Gemini avec retry + fallback automatique sur 503.
+
+    Stratégie :
+      1. Tente le modèle principal jusqu'à _MAX_RETRIES fois (backoff exponentiel).
+      2. Si toujours 503, essaie les modèles de secours dans _FALLBACK_MODELS.
+      3. Retourne une erreur lisible si tous les modèles échouent.
+    """
     if not _gemini_client:
         return "__ERROR__ Clé GEMINI_API_KEY manquante ou invalide"
-    try:
-        response = _gemini_client.models.generate_content(
-            model=_settings.gemini_model,
-            contents=[
-                types.Part.from_text(text=PROMPT),
-                types.Part.from_bytes(data=raw_bytes, mime_type=mime_type),
-            ],
-        )
-        json_str = _nettoyer_json(response.text)
-        return RibData.model_validate_json(json_str)
-    except ValidationError as e:
-        return f"__ERROR__ Données invalides ({e.error_count()} champ(s)) : {e.errors()[0]['msg']}"
-    except json.JSONDecodeError:
-        raw = getattr(response, "text", "")
-        return f"__ERROR__ Réponse non-JSON : {raw[:200]}"
-    except Exception as e:
-        return f"__ERROR__ {e}"
+
+    models = [_settings.gemini_model] + _FALLBACK_MODELS
+
+    for model in models:
+        for attempt in range(_MAX_RETRIES):
+            try:
+                response = _gemini_client.models.generate_content(
+                    model=model,
+                    contents=[
+                        types.Part.from_text(text=PROMPT),
+                        types.Part.from_bytes(data=raw_bytes, mime_type=mime_type),
+                    ],
+                )
+                json_str = _nettoyer_json(response.text)
+                return RibData.model_validate_json(json_str)
+            except ValidationError as e:
+                return f"__ERROR__ Données invalides ({e.error_count()} champ(s)) : {e.errors()[0]['msg']}"
+            except json.JSONDecodeError:
+                raw = getattr(response, "text", "")
+                return f"__ERROR__ Réponse non-JSON : {raw[:200]}"
+            except Exception as e:
+                if _is_503(e):
+                    if attempt < _MAX_RETRIES - 1:
+                        time.sleep(2 ** attempt)  # 1s, 2s, 4s
+                        continue
+                    break  # passe au modèle suivant
+                return f"__ERROR__ {e}"
+
+    return "__ERROR__ Tous les modèles sont indisponibles (503). Réessayez dans quelques instants."
 
 
 # ---------------------------------------------------------------------------
