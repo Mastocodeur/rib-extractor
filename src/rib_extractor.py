@@ -388,6 +388,11 @@ def extraire_par_libelles(t: str):
 # Boucle principale d'analyse de tous les fichiers PDF
 # ---------------------------------------------------------------------------
 
+def nz(v: str) -> str:
+    """Remplace une valeur vide par 'MANQUANT'."""
+    return v if v else "MANQUANT"
+
+
 rows = []
 
 for fichier in os.listdir(DOSSIER_PDF):
@@ -421,8 +426,6 @@ for fichier in os.listdir(DOSSIER_PDF):
     if not iban and all([cb, cg, nc, cle]):
         iban = construire_iban_fr(cb, cg, nc, cle)
     bic = extraire_bic_valide(tclean)
-
-    def nz(v): return v if v else "MANQUANT"
 
     rows.append({
         "Fichier": fichier,
