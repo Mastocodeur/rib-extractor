@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import tempfile
 import os
-import traceback
 from utils import (
     extraire_texte_ocr,
     nettoyer,
@@ -46,14 +45,14 @@ if not uploaded_files:
     st.stop()
 
 # --- Traitement des fichiers uploadés ---
-data = [] # Contiendra les résultats finaux
+data: list[dict] = []  # Contiendra les résultats finaux
 progress = st.progress(0) # Barre de progression Streamlit
 total = len(uploaded_files) # Nombre total de fichiers
 
 
 
 # Petite fonction utilitaire : remplace "" par "MANQUANT"
-def nz(v):  
+def nz(v: str) -> str:
     return v if (v is not None and str(v).strip() != "") else "MANQUANT"
 
 # Boucle principale : traitement de chaque fichier PDF uploadé

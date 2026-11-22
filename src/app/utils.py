@@ -75,14 +75,7 @@ PAT_BIC = re.compile(
     re.VERBOSE # Permet d’ajouter des commentaires et des sauts de lignes dans le pattern
 )
 
-# Pattern du code BIC lui-même (structure officielle, 8 ou 11 chars)
-# 4 lettres (banque), 2 lettres (pays), 2 alphanumériques (localisation), 3 optionnels (agence).
-PAT_BIC_CODE = re.compile(
-    r'[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?'
-)
-
-
-# On couvre différents libellés possibles pour capter le titulaire, 
+# On couvre différents libellés possibles pour capter le titulaire,
 # car la structure des RIB varie selon les banques.
 PAT_TITULAIRE = re.compile(
     r'(?i)\b(titulaire(?:\s*du\s*compte)?|nom\s+du\s+titul(?:aire)?|b[ée]n[ée]ficiaire|au\s*nom\s*de)\b\s*[:\-]?\s*([A-ZÉÈÊÀÂÎÏÔÙÜÇa-z0-9\.\'\-\s]+)'
@@ -179,7 +172,7 @@ def extraire_iban_valide(t: str) -> str:
                 continue
     return ""
 
-def decomposer_iban_fr(iban: str):
+def decomposer_iban_fr(iban: str) -> tuple[str, str, str, str]:
     """Décompose un IBAN français en code banque, guichet, compte et clé."""
     # Si l'IBAN est vide ou invalide, retourne des chaînes vides.
     if not iban:
@@ -247,7 +240,7 @@ PAT_BIC_CODE = re.compile(
 )
 
 #region Nettoyage
-def nettoyer_bic_ocr(chunk):
+def nettoyer_bic_ocr(chunk: str) -> str:
     """
     Nettoie un BIC sorti de l'OCR :
     - supprime les espaces
@@ -317,7 +310,6 @@ def extraire_bic_valide(texte: str) -> str:
     4. Fallback global sur tout le texte si aucun label trouvé
     """
     lignes = texte.splitlines()
-    n = len(lignes)
 
     # 1) On cherche d'abord les zones où on parle de BIC / SWIFT
     for i, ligne in enumerate(lignes):
@@ -360,18 +352,18 @@ def extraire_titulaire(t: str) -> str:
         val = m.group(2).strip().split("\n")[0].strip()
         if len(val) > 3 and not re.search(r'\b(BIC|IBAN|DOMICILIATION)\b', val, re.I):
             return val
-    for l in t.split('\n'):
-        if re.search(r'\b(M\.|MME|MONSIEUR|MADAME|SARL|SAS|SA|EURL|SOCIETE)\b', l, re.I):
-            return l.strip()
+    for line in t.split('\n'):
+        if re.search(r'\b(M\.|MME|MONSIEUR|MADAME|SARL|SAS|SA|EURL|SOCIETE)\b', line, re.I):
+            return line.strip()
     return ""
 
 def extraire_domiciliation(t: str) -> str:
     """Extrait la domiciliation sur plusieurs lignes consécutives."""
-    lignes = [l.strip() for l in t.split('\n') if l.strip()]
-    for i, l in enumerate(lignes):
-        if re.search(r'(?i)\b(domiciliation|agence|adresse)\b', l):
+    lignes = [line.strip() for line in t.split('\n') if line.strip()]
+    for i, line in enumerate(lignes):
+        if re.search(r'(?i)\b(domiciliation|agence|adresse)\b', line):
             contenu = []
-            m = re.search(r'(?i)\b(domiciliation|agence|adresse)\b[:\-\s]*(.*)', l)
+            m = re.search(r'(?i)\b(domiciliation|agence|adresse)\b[:\-\s]*(.*)', line)
             after = m.group(2).strip() if m else ""
             if after:
                 contenu.append(after)
@@ -386,7 +378,7 @@ def extraire_domiciliation(t: str) -> str:
     return ""
 
 #region Finalisation
-def extraire_par_libelles(t: str):
+def extraire_par_libelles(t: str) -> tuple[str, str, str, str, str, str]:
     """Extrait tous les champs RIB à partir des libellés textuels."""
     cb = cg = nc = cle = tit = dom = ""
     m = PAT_CODE_BANQUE.search(t);  cb = m.group(2) if m else ""

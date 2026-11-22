@@ -21,6 +21,7 @@ Le flux complet :
 Ce fichier est structuré pour être lisible, maintenable et robuste.
 """
 
+import io
 import streamlit as st
 import pandas as pd
 import requests
@@ -344,7 +345,6 @@ st.download_button(
     mime="text/csv",
 )
 
-import io
 # ==================== EXPORT EXCEL ====================
 excel_buffer = io.BytesIO()
 with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
