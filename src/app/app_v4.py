@@ -125,7 +125,18 @@ def _nettoyer_json(texte: str) -> str:
     return texte
 
 
-_FALLBACK_MODELS: list[str] = ["gemini-3.6-flash", "gemini-3.5-flash"]
+_FALLBACK_MODELS: list[str] = [
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-omni-1.2-flash",
+    "gemini-omni-1.1-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-image",
+    "gemini-2.5-flash-image",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
+]
 _MAX_RETRIES = 3
 
 
@@ -139,6 +150,12 @@ def _is_404(exc: Exception) -> bool:
     """Détecte un modèle indisponible (retiré ou inaccessible)."""
     msg = str(exc)
     return "404" in msg or "NOT_FOUND" in msg
+
+
+def _is_429(exc: Exception) -> bool:
+    """Détecte un quota dépassé (quota free tier par modèle)."""
+    msg = str(exc)
+    return "429" in msg or "RESOURCE_EXHAUSTED" in msg
 
 
 def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
@@ -172,8 +189,8 @@ def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
                 raw = getattr(response, "text", "")
                 return f"__ERROR__ Réponse non-JSON : {raw[:200]}"
             except Exception as e:
-                if _is_404(e):
-                    break  # modèle retiré → passe au suivant sans retry
+                if _is_404(e) or _is_429(e):
+                    break  # modèle indispo ou quota épuisé → passe au suivant
                 if _is_503(e):
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(2 ** attempt)  # 1s, 2s, 4s
@@ -181,7 +198,7 @@ def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
                     break  # passe au modèle suivant
                 return f"__ERROR__ {e}"
 
-    return "__ERROR__ Tous les modèles sont indisponibles (503). Réessayez dans quelques instants."
+    return "__ERROR__ Tous les modèles sont indisponibles (quota épuisé ou surcharge). Réessayez demain ou passez à un plan payant."
 
 
 # ---------------------------------------------------------------------------
