@@ -1,7 +1,7 @@
 [project]
 name = "rib-analyzeur"
 version = "0.1.0"
-description = "Add your description here"
+description = "Extraction automatique des informations de RIB français (PDF natif via pdfplumber, PDF scanné via Gemini Vision)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -17,6 +17,8 @@ dependencies = [
     "google-genai>=1.50.1",
     "xlsxwriter>=3.2.9",
     "pyarrow>=21.0.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
 ]
 
 [tool.uv.sources]
