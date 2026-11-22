@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         ),
     )
     gemini_model: str = Field(
-        default="gemini-2.0-flash",
+        default="gemini-3.8-flash",
         description="Identifiant du modèle Gemini à utiliser pour l'extraction Vision.",
     )
     texte_min_chars: int = Field(

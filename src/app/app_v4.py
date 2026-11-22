@@ -44,7 +44,7 @@ class Settings(BaseModel):
         description="Clé API Google Gemini (jamais loggée).",
     )
     gemini_model: str = Field(
-        default="gemini-2.0-flash",
+        default="gemini-3.8-flash",
         description="Identifiant du modèle Gemini.",
     )
     texte_min_chars: int = Field(
@@ -59,7 +59,7 @@ class Settings(BaseModel):
         load_dotenv()
         return cls(
             gemini_api_key=SecretStr(os.getenv("GEMINI_API_KEY", "")),
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
             texte_min_chars=int(os.getenv("TEXTE_MIN_CHARS", "80")),
         )
 

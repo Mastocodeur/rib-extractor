@@ -2,7 +2,7 @@
 RIB Extractor v3 — Gemini Vision (primaire) + pdfplumber (vérification)
 
 Stratégie :
-  Primaire  — Gemini 2.0 Flash Vision sur tous les fichiers (PDF et images).
+  Primaire  — Gemini 3.8 Flash Vision sur tous les fichiers (PDF et images).
               Résultats fiables quelle que soit la mise en page du RIB.
   Vérif.    — Pour les PDF natifs uniquement, pdfplumber extrait le texte
               et les regex tentent de retrouver l'IBAN. Si les deux
@@ -170,7 +170,7 @@ st.set_page_config(page_title="RIB Extractor v3", page_icon="💳", layout="cent
 st.title("💳 RIB Extractor v3")
 st.markdown("""
 **Stratégie d'extraction :**
-- **Gemini 2.0 Flash** — extraction principale sur tous les fichiers (PDF natif, scanné, image)
+- **Gemini 3.8 Flash** — extraction principale sur tous les fichiers (PDF natif, scanné, image)
 - **pdfplumber** — vérification croisée de l'IBAN sur les PDF natifs (colonne *Vérification*)
 
 Téléversez vos RIB (PDF ou images) pour démarrer.
