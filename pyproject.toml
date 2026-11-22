@@ -12,7 +12,6 @@ dependencies = [
     "pdf2image>=1.17.0",
     "pillow>=12.0.0",
     "streamlit>=1.51.0",
-    "rib-analyzeur",
     "python-dotenv>=1.2.1",
     "google-genai>=1.50.1",
     "xlsxwriter>=3.2.9",
@@ -20,6 +19,3 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
 ]
-
-[tool.uv.sources]
-rib-analyzeur = { workspace = true }
