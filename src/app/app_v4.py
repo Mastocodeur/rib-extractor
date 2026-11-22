@@ -125,6 +125,8 @@ def _nettoyer_json(texte: str) -> str:
     return texte
 
 
+_exhausted_models: set[str] = set()
+
 _FALLBACK_MODELS: list[str] = [
     "gemini-3.8-flash",
     "gemini-3.7-flash",
@@ -169,7 +171,10 @@ def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
     if not _gemini_client:
         return "__ERROR__ Clé GEMINI_API_KEY manquante ou invalide"
 
-    models = [_settings.gemini_model] + _FALLBACK_MODELS
+    models = [
+        m for m in [_settings.gemini_model] + _FALLBACK_MODELS
+        if m not in _exhausted_models
+    ]
 
     for model in models:
         for attempt in range(_MAX_RETRIES):
@@ -190,7 +195,8 @@ def extraire_via_gemini(raw_bytes: bytes, mime_type: str) -> RibData | str:
                 return f"__ERROR__ Réponse non-JSON : {raw[:200]}"
             except Exception as e:
                 if _is_404(e) or _is_429(e):
-                    break  # modèle indispo ou quota épuisé → passe au suivant
+                    _exhausted_models.add(model)  # ne plus retenter ce modèle
+                    break
                 if _is_503(e):
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(2 ** attempt)  # 1s, 2s, 4s
@@ -223,17 +229,21 @@ def _extraire_iban_via_regex(texte: str) -> str:
     return iban
 
 
-def verifier_iban(iban_gemini: str, raw_bytes: bytes) -> str:
-    """Compare l'IBAN Gemini avec celui extrait par pdfplumber."""
+def verifier_iban(iban_gemini: str, raw_bytes: bytes) -> tuple[str, str]:
+    """Compare l'IBAN Gemini avec celui extrait par pdfplumber.
+
+    Retourne (statut, iban_corrige) où iban_corrige est l'IBAN pdfplumber
+    quand il diffère de Gemini (correction d'hallucination), sinon "".
+    """
     texte = _extraire_texte_pdfplumber(raw_bytes)
     if len(texte) < _settings.texte_min_chars:
-        return "— scan ou image"
+        return "— scan ou image", ""
     iban_pdf = _extraire_iban_via_regex(texte)
     if not iban_pdf:
-        return "— pdfplumber : aucun IBAN trouvé"
+        return "— pdfplumber : aucun IBAN trouvé", ""
     if iban_gemini.replace(" ", "").upper() == iban_pdf.replace(" ", "").upper():
-        return "✅ IBAN concordant"
-    return f"⚠️ IBAN discordant — pdfplumber : {iban_pdf}"
+        return "✅ IBAN concordant", ""
+    return f"⚠️ IBAN corrigé (Gemini : {iban_gemini})", iban_pdf
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +297,9 @@ def _traiter_fichier(name: str, mime_type: str, raw_bytes: bytes) -> dict:
     else:
         rib_data = result
         if mime_type == "application/pdf":
-            verification = verifier_iban(rib_data.iban, raw_bytes)
+            verification, iban_corrige = verifier_iban(rib_data.iban, raw_bytes)
+            if iban_corrige:
+                rib_data = rib_data.model_copy(update={"iban": iban_corrige})
     return rib_data.to_export_row(name, "Gemini Vision", erreur, verification)
 
 
