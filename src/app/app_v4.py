@@ -274,6 +274,8 @@ def _traiter_fichier(name: str, mime_type: str, raw_bytes: bytes) -> dict:
     return rib_data.to_export_row(name, "Gemini Vision", erreur, verification)
 
 
+table_placeholder = st.empty()
+
 with ThreadPoolExecutor(max_workers=min(total, 5)) as executor:
     futures = {
         executor.submit(_traiter_fichier, name, mime_type, raw_bytes): name
@@ -284,6 +286,7 @@ with ThreadPoolExecutor(max_workers=min(total, 5)) as executor:
         rows.append(future.result())
         done += 1
         progress.progress(done / total)
+        table_placeholder.dataframe(pd.DataFrame(rows), use_container_width=True)
 
 df = pd.DataFrame(rows)
 
