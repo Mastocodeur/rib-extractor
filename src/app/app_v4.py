@@ -275,15 +275,27 @@ uploaded_files = st.file_uploader(
 )
 
 if not uploaded_files:
+    st.session_state.pop("results", None)
     st.info("En attente de fichiers…")
     st.stop()
 
-rows: list[dict] = []
-progress = st.progress(0)
-total = len(uploaded_files)
-
 # Lecture séquentielle (objets Streamlit non thread-safe)
 file_data = [(f.name, f.type, f.read()) for f in uploaded_files]
+uploaded_names = {name for name, _, _ in file_data}
+
+# Initialise / purge les résultats obsolètes
+if "results" not in st.session_state:
+    st.session_state.results = {}
+st.session_state.results = {
+    k: v for k, v in st.session_state.results.items() if k in uploaded_names
+}
+
+# Fichiers à traiter : pas encore dans les résultats, ou en erreur
+to_process = [
+    (name, mime, rb) for name, mime, rb in file_data
+    if name not in st.session_state.results
+    or st.session_state.results[name].get("Erreur", "").startswith("__ERROR__")
+]
 
 
 def _traiter_fichier(name: str, mime_type: str, raw_bytes: bytes) -> dict:
@@ -303,23 +315,39 @@ def _traiter_fichier(name: str, mime_type: str, raw_bytes: bytes) -> dict:
     return rib_data.to_export_row(name, "Gemini Vision", erreur, verification)
 
 
-table_placeholder = st.empty()
-
-with ThreadPoolExecutor(max_workers=min(total, 5)) as executor:
-    futures = {
-        executor.submit(_traiter_fichier, name, mime_type, raw_bytes): name
-        for name, mime_type, raw_bytes in file_data
-    }
+if to_process:
+    progress = st.progress(0)
+    total = len(to_process)
+    table_placeholder = st.empty()
     done = 0
-    for future in as_completed(futures):
-        rows.append(future.result())
-        done += 1
-        progress.progress(done / total)
-        table_placeholder.dataframe(pd.DataFrame(rows), use_container_width=True)
 
+    with ThreadPoolExecutor(max_workers=min(total, 2)) as executor:
+        futures = {
+            executor.submit(_traiter_fichier, name, mime, rb): name
+            for name, mime, rb in to_process
+        }
+        for future in as_completed(futures):
+            row = future.result()
+            st.session_state.results[row["Fichier"]] = row
+            done += 1
+            progress.progress(done / total)
+            current_rows = [st.session_state.results[n] for n, _, _ in file_data if n in st.session_state.results]
+            table_placeholder.dataframe(pd.DataFrame(current_rows), use_container_width=True)
+
+rows = [st.session_state.results[name] for name, _, _ in file_data if name in st.session_state.results]
 df = pd.DataFrame(rows)
 
-st.success("✅ Extraction terminée")
+error_count = sum(1 for r in rows if r.get("Erreur", "").startswith("__ERROR__"))
+if error_count:
+    st.warning(f"⚠️ {error_count} fichier(s) en erreur.")
+    if st.button(f"🔄 Réessayer ({error_count} fichier(s))"):
+        for r in rows:
+            if r.get("Erreur", "").startswith("__ERROR__"):
+                st.session_state.results.pop(r["Fichier"], None)
+        st.rerun()
+else:
+    st.success("✅ Extraction terminée")
+
 st.dataframe(df, use_container_width=True)
 
 csv_bytes = df.to_csv(index=False).encode("utf-8")
